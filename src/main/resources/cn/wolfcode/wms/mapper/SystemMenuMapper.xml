@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.wolfcode.wms.mapper.SystemMenuMapper">
+	<insert id="save">
+		INSERT INTO systemmenu(name,url,sn,parent_id) VALUES(#{name},#{url},#{sn},#{parent.id})
+	</insert>
+	<delete id="delete">
+		DELETE FROM systemmenu WHERE id = #{id}
+	</delete>
+	<update id="update">
+		UPDATE 
+			systemmenu 
+		SET 
+			name = #{name},
+			url = #{url},
+			sn = #{sn},
+			parent_id = #{parent.id}
+		WHERE 
+			id = #{id} 
+	</update>
+	<select id="get" resultMap="basqlResultMap">
+		SELECT id,name,url,sn,parent_id FROM systemmenu WHERE id = #{id}
+	</select>
+	<select id="listAll" resultType="SystemMenu">
+		SELECT id,name,url,sn,parent_id FROM systemmenu
+	</select>
+	<resultMap type="SystemMenu" id="basqlResultMap">
+		<id property="id" column="id" />
+		<result property="name" column="name" />
+		<result property="url" column="url" />
+		<result property="sn" column="sn" />
+		<association property="parent" javaType="SystemMenu" select="get" column="parent_id"/>
+	</resultMap>
+	<sql id="basql">
+		<where>
+			<if test="parentId == null">
+				AND parent_id IS NULL
+			</if>
+			<if test="parentId != null">
+				AND parent_id = #{parentId}
+			</if>
+		</where>
+	</sql>
+	<select id="queryForCount" resultType="int">
+		SELECT COUNT(id) FROM systemmenu
+		<include refid="basql"/>
+	</select>
+	<select id="queryForList" resultMap="basqlResultMap">
+		SELECT id,name,url,sn,parent_id FROM systemmenu 
+		<include refid="basql"/>
+		LIMIT #{start},#{pageSize}
+	</select>
+	<select id="selectMenuByParentSn" resultType="map">
+		SELECT 
+			child.id,child.name,child.url AS controller,child.parent_id AS pId 
+		FROM 
+			systemmenu AS child 
+		JOIN 
+			systemmenu AS parent 
+		ON 
+			parent.id = child.parent_id 
+		WHERE 
+			parent.sn = #{parentSn}
+	</select>
+	<select id="querySystemMenuByRoleId" resultType="SystemMenu">
+		SELECT id,name,url,sn,parent_id FROM SystemMenu WHERE id IN(
+			SELECT menu_id FROM role_menu WHERE role_id = #{roleId}
+		)
+	</select>
+	<select id="selectMenuByParentSnAndEmpId" resultType="map">
+		SELECT 
+			child.id,child.name,child.url AS controller,child.parent_id AS pId 
+		FROM 
+			systemmenu AS child 
+		JOIN 
+			systemmenu AS parent 
+		ON 
+			parent.id = child.parent_id 
+		WHERE 
+			parent.sn = #{parentSn}
+		AND 
+			child.id IN (
+			SELECT menu_id FROM role_menu WHERE role_id IN (
+				SELECT role_id FROM employee_role WHERE employee_id = #{empId} 
+				)
+		) 
+	</select>
+</mapper>

@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="cn.wolfcode.wms.mapper.StockoutcomeBillMapper">
+    <resultMap id="BaseResultMap" type="cn.wolfcode.wms.domain.StockoutcomeBill">
+        <id column="id" property="id"/>
+        <result column="sn" property="sn"/>
+        <result column="vdate" property="vdate"/>
+        <result column="status" property="status"/>
+        <result column="total_amount" property="totalAmount"/>
+        <result column="total_number" property="totalNumber"/>
+        <result column="audit_time" property="auditTime"/>
+        <result column="input_time" property="inputTime"/>
+        <association property="inputUser" javaType="Employee" columnPrefix="inputUser_">
+            <result property="id" column="id"/>
+            <result property="name" column="name"/>
+        </association>
+        <association property="auditor" javaType="Employee" columnPrefix="auditor_">
+            <result property="id" column="id"/>
+            <result property="name" column="name"/>
+        </association>
+        <association property="depot" javaType="Depot" columnPrefix="depot_">
+            <result property="id" column="id"/>
+            <result property="name" column="name"/>
+        </association>
+        <association property="client" javaType="Client" columnPrefix="client_">
+            <result property="id" column="id"/>
+            <result property="name" column="name"/>
+        </association>
+        <collection property="items" select="cn.wolfcode.wms.mapper.StockoutcomeBillItemMapper.selectBillItemByBillId"
+                    column="id"/>
+    </resultMap>
+    <delete id="deleteByPrimaryKey" parameterType="java.lang.Long">
+    delete from `stockoutcomebill`
+    where id = #{id}
+  </delete>
+    <insert id="insert" parameterType="cn.wolfcode.wms.domain.StockoutcomeBill" useGeneratedKeys="true"
+            keyProperty="id">
+    insert into `stockoutcomebill` (sn, vdate, status, total_amount, total_number, audit_time, 
+      input_time, input_user_id, auditor_id, depot_id, client_id)
+    values (#{sn}, #{vdate}, #{status}, #{totalAmount}, #{totalNumber}, #{auditTime}, 
+      #{inputTime}, #{inputUser.id}, #{auditor.id}, #{depot.id}, #{client.id})
+  </insert>
+    <update id="updateByPrimaryKey" parameterType="cn.wolfcode.wms.domain.StockoutcomeBill">
+    update `stockoutcomebill`
+    set sn = #{sn},
+      total_amount = #{totalAmount},
+      total_number = #{totalNumber},
+      depot_id = #{depot.id},
+      client_id = #{client.id}
+    where id = #{id}
+  </update>
+    <select id="selectByPrimaryKey" resultMap="BaseResultMap" parameterType="java.lang.Long">
+    select bill.id, bill.sn, bill.vdate,depot.id depot_id,depot.`name` depot_name,client.id client_id,client.`name` client_name
+    ,inputUser.id inputUser_id from `stockoutcomebill` bill
+    LEFT JOIN depot depot ON bill.depot_id = depot.id
+	LEFT JOIN client client ON bill.client_id = client.id
+	LEFT JOIN employee inputUser ON bill.input_user_id = inputUser.id
+    where bill.id = #{id}
+  </select>
+    <select id="selectAll" resultMap="BaseResultMap">
+    select id, sn, vdate, status, total_amount, total_number, audit_time, input_time, 
+    input_user_id, auditor_id, depot_id, client_id
+    from `stockoutcomebill`
+  </select>
+    <sql id="baseSql">
+        <where>
+            <if test="beginDate != null">
+                AND bill.vdate &gt;= #{beginDate}
+            </if>
+            <if test="endDate != null">
+                AND bill.vdate &lt;= #{endDate}
+            </if>
+            <if test="depotId>0">
+                AND depot.id = #{depotId}
+            </if>
+            <if test="clientId>0">
+                AND client.id = #{clientId}
+            </if>
+            <if test="status>=0">
+                AND bill.status = #{status}
+            </if>
+        </where>
+    </sql>
+    <select id="queryForCount" resultType="int">
+        SELECT COUNT(bill.id) FROM
+        `stockoutcomebill` bill
+        LEFT JOIN employee inputUser ON bill.input_user_id = inputUser.id
+        LEFT JOIN employee auditor ON bill.auditor_id = auditor.id
+        LEFT JOIN depot depot ON bill.depot_id = depot.id
+        LEFT JOIN client client ON bill.client_id = client.id
+        <include refid="baseSql"/>
+    </select>
+    <select id="queryForList" resultMap="BaseResultMap">
+        SELECT
+        bill.id, bill.sn, bill.vdate, bill.status, bill.total_amount, bill.total_number, bill.audit_time,
+        bill.input_time,
+        inputUser.id inputUser_id, inputUser.`name` inputUser_name,
+        auditor.id auditor_id,
+        auditor.`name` auditor_name,
+        depot.id depot_id,
+        depot.`name` depot_name,
+        client.id client_id,
+        client.`name` client_name
+        FROM
+        `stockoutcomebill` bill
+        LEFT JOIN employee inputUser ON bill.input_user_id = inputUser.id
+        LEFT JOIN employee auditor ON bill.auditor_id = auditor.id
+        LEFT JOIN depot depot ON bill.depot_id = depot.id
+        LEFT JOIN client client ON bill.client_id = client.id
+        <include refid="baseSql"/>
+        LIMIT #{start},#{pageSize}
+    </select>
+    <update id="updateAuditor">
+		UPDATE stockoutcomebill SET status = #{status}, audit_time = #{auditTime},auditor_id = #{auditor.id}
+		WHERE id = #{id}
+	</update>
+</mapper>

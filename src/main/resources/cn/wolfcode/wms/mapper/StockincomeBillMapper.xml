@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="cn.wolfcode.wms.mapper.StockincomeBillMapper" >
+  <resultMap id="BaseResultMap" type="cn.wolfcode.wms.domain.StockincomeBill" >
+    <id column="id" property="id" />
+    <result column="sn" property="sn" />
+    <result column="vdate" property="vdate" />
+    <result column="status" property="status" />
+    <result column="total_amount" property="totalAmount" />
+    <result column="total_number" property="totalNumber" />
+    <result column="audit_time" property="auditTime" />
+    <result column="input_time" property="inputTime" />
+    <association property="inputUser" javaType="Employee" columnPrefix="inputUser_">
+		<id property="id" column="id" />
+    	<result property="name" column="name" />
+    </association>
+    <association property="auditor" javaType="Employee" columnPrefix="auditor_">
+		<id property="id" column="id" />
+    	<result property="name" column="name" />
+    </association>
+	<association property="depot" javaType="Depot" columnPrefix="depot_">
+		<id property="id" column="id" />
+		<result property="name" column="name" />
+	</association>
+	<collection property="items" ofType="StockincomeBillItem" select="cn.wolfcode.wms.mapper.StockincomeBillItemMapper.selectByBillId" column="id"/>
+  </resultMap>
+  <delete id="deleteByPrimaryKey" parameterType="java.lang.Long" >
+    delete from `stockincomebill`
+    where id = #{id}
+  </delete>
+  <insert id="insert" parameterType="cn.wolfcode.wms.domain.StockincomeBill" useGeneratedKeys="true" keyProperty="id" >
+    insert into `stockincomebill` (sn, vdate, status, total_amount, total_number, audit_time, 
+      input_time, input_user_id, auditor_id, depot_id)
+    values (#{sn}, #{vdate}, #{status}, #{totalAmount}, #{totalNumber}, #{auditTime}, 
+      #{inputTime}, #{inputUser.id}, #{auditor.id}, #{depot.id})
+  </insert>
+  <update id="updateByPrimaryKey" parameterType="cn.wolfcode.wms.domain.StockincomeBill" >
+    update `stockincomebill`
+    set sn = #{sn},
+      vdate = #{vdate},
+      total_amount = #{totalAmount},
+      total_number = #{totalNumber},
+      depot_id = #{depot.id}
+    where id = #{id}
+  </update>
+  <select id="selectByPrimaryKey" resultMap="BaseResultMap" parameterType="java.lang.Long" >
+    SELECT
+		stockincomebill.id,
+		sn,
+		vdate,
+		depot.id AS depot_id,
+		depot.`name` AS depot_name
+	FROM
+		`stockincomebill` stockincomebill
+	JOIN 
+		depot depot ON stockincomebill.depot_id = depot.id
+	WHERE
+		stockincomebill.id = #{id}
+  </select>
+  <select id="selectAll" resultMap="BaseResultMap" >
+    select id, sn, vdate, status, total_amount, total_number, audit_time, input_time, 
+    input_user_id, auditor_id, depot_id
+    from `stockincomebill`
+  </select>
+  <sql id="baseSql">
+  	<where>
+  		<if test="beginDate != null">
+  			AND stockincomebill.vdate &gt;= #{beginDate}
+  		</if>
+  		<if test="endDate != null">
+  			AND stockincomebill.vdate &lt;= #{endDate}
+  		</if>
+  		<if test="depotId>0">
+  			AND depot.id = #{depotId}
+  		</if>
+  		<if test="status>=0">
+  			AND stockincomebill.status = #{status}
+  		</if>
+  	</where>
+  </sql>
+   <select id="queryForCount" resultType="int">
+		SELECT COUNT(stockincomebill.id) FROM stockincomebill stockincomebill
+		LEFT JOIN depot depot ON stockincomebill.depot_id = depot.id
+		LEFT JOIN employee inputUser ON stockincomebill.input_user_id = inputUser.id
+		LEFT JOIN employee auditor ON stockincomebill.auditor_id = auditor.id
+		<include refid="baseSql"/>
+	</select>
+	<select id="queryForList" resultMap="BaseResultMap">
+		SELECT
+			stockincomebill.id,
+			stockincomebill.sn,
+			stockincomebill.vdate,
+			stockincomebill.status,
+			stockincomebill.total_amount,
+			stockincomebill.total_number,
+			stockincomebill.audit_time,
+			stockincomebill.input_time,
+			inputUser.id AS inputUser_id,
+			inputUser.`name` AS inputUser_name,
+			auditor.id AS auditor_id,
+			auditor.`name` AS auditor_name,
+			depot.id AS depot_id,
+			depot.`name` AS depot_name
+		FROM
+			stockincomebill stockincomebill
+		LEFT JOIN depot depot ON stockincomebill.depot_id = depot.id
+		LEFT JOIN employee inputUser ON stockincomebill.input_user_id = inputUser.id
+		LEFT JOIN employee auditor ON stockincomebill.auditor_id = auditor.id 
+   	 <include refid="baseSql"/>
+    LIMIT #{start},#{pageSize}
+	</select>
+	<update id="updateAuditorByPrimaryKey">
+		UPDATE stockincomebill SET status = #{status}, audit_time = #{auditTime},
+		auditor_id = #{auditor.id} WHERE id = #{id}
+	</update>
+</mapper>

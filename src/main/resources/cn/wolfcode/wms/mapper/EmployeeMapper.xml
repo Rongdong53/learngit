@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.wolfcode.wms.mapper.EmployeeMapper">
+	<insert id="save" useGeneratedKeys="true" keyProperty="id" keyColumn="id">
+		INSERT INTO employee(name,password,email,age,admin,dept_id) 
+		VALUES(#{name},#{password},#{email},#{age},#{admin},#{dept.id})
+	</insert>
+	<delete id="delete">
+		DELETE FROM employee WHERE id = #{id}
+	</delete>
+	<update id="update">
+		UPDATE 
+			employee 
+		SET 
+			name = #{name},
+			email = #{email},
+			age = #{age},
+			admin = #{admin},
+			dept_id = #{dept.id}
+		WHERE 
+			id = #{id} 
+	</update>
+	<select id="get" resultMap="baseResultMap">
+		SELECT 
+			e.id,e.name,e.password,e.email,e.age,e.admin,d.id d_id,d.`name` d_name 
+		FROM 
+			employee e 
+		LEFT JOIN 
+			department d ON e.dept_id = d.id 
+		WHERE e.id = #{id}
+	</select>
+	<select id="listAll" resultType="Employee">
+		SELECT id,name,password,email,age,admin,dept_id FROM employee
+	</select>
+	
+	<select id="queryForCount" resultType="int">
+		SELECT 
+			COUNT(e.id) 
+		FROM 
+			employee e 
+		LEFT JOIN 
+			department d ON e.dept_id = d.id 
+		<include refid="baseSql"/>
+	</select>
+	
+	<resultMap type="Employee" id="baseResultMap">
+		<id property="id" column="id" />
+		<result property="name" column="name" />
+		<result property="password" column="password" />
+		<result property="email" column="email" />
+		<result property="age" column="age" />
+		<result property="admin" column="admin" />
+		<association property="dept" javaType="Department" columnPrefix="d_">
+			<result property="id" column="id" />
+			<result property="name" column="name" />
+		</association>
+		<collection property="roles" ofType="Role" select="cn.wolfcode.wms.mapper.RoleMapper.queryRoleByEmployeeId" column="id"></collection>
+	</resultMap>
+	<sql id="baseSql">
+		<where>
+			<if test="keywords != null">
+				AND (e.name LIKE CONCAT('%',#{keywords},'%') OR e.email LIKE CONCAT('%',#{keywords},'%'))
+			</if>
+			<if test="deptId != null and deptId > 0">
+				AND e.dept_id = #{deptId}
+			</if>
+		</where>
+	</sql>
+	<select id="queryForList" resultMap="baseResultMap">
+		SELECT 
+			e.id,e.name,e.password,e.email,e.age,e.admin,d.id d_id,d.`name` d_name 
+		FROM 
+			employee e
+		LEFT JOIN 
+			department d ON e.dept_id = d.id
+			<include refid="baseSql"/>
+		LIMIT #{start},#{pageSize}
+	</select>
+	
+	<insert id="insertRoleRelation">
+		INSERT INTO employee_role(employee_id,role_id) VALUES(#{empId},#{roleId})
+	</insert>
+	<delete id="deleteRoleRelation">
+		DELETE FROM employee_role WHERE employee_id = #{empId}
+	</delete>
+	
+	<select id="queryUserNameAndPassword" resultType="Employee">
+		SELECT id,name,password,email,age,admin FROM employee WHERE name = #{userName} AND password = #{password}
+	</select>
+	
+	<delete id="batchdelete">
+		DELETE FROM employee WHERE id IN
+		<foreach collection="array" open="(" item="id" separator="," close=")">
+			#{id}
+		</foreach>
+	</delete>
+</mapper>
